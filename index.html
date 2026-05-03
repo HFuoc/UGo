@@ -671,35 +671,86 @@ async function reverseGeocode(lat, lng) {
   } catch { return lat.toFixed(5) + ', ' + lng.toFixed(5); }
 }
 
+// Debounce timer để tránh gọi Nominatim liên tục
+const _searchTimers = {};
+
 async function searchSuggest(type, query) {
   const suggestId = type === 'pickup' ? 'pickupSuggest' : 'dropoffSuggest';
   const box = document.getElementById(suggestId);
-  box.innerHTML = '<div class="item muted">Đang tìm...</div>';
-  box.style.display = 'block';
-  try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=vn&accept-language=vi`;
-    const r = await fetch(url);
-    const results = await r.json();
-    if (!results.length) { box.innerHTML = '<div class="item muted">Không tìm thấy kết quả</div>'; return; }
-    box.innerHTML = '';
-    results.forEach(item => {
-      const el = document.createElement('div');
-      el.className = 'item';
-      const parts = item.display_name.split(', ');
-      el.innerHTML = `<b>${parts[0]}</b><span class="sub">${parts.slice(1).join(', ')}</span>`;
-      el.onclick = () => {
-        if (type === 'pickup') {
-          setPickup(+item.lat, +item.lon, false, item.display_name);
+
+  // Debounce 400ms — huỷ lần gọi trước nếu người dùng vẫn đang gõ
+  clearTimeout(_searchTimers[type]);
+  _searchTimers[type] = setTimeout(async () => {
+    box.innerHTML = '<div class="item muted">Đang tìm...</div>';
+    box.style.display = 'block';
+    try {
+      // Không dùng countrycodes=vn vì đôi khi Nominatim lọc thiếu kết quả
+      // Dùng viewbox để ưu tiên khu vực Việt Nam thay thế
+      const url = `https://nominatim.openstreetmap.org/search` +
+        `?format=jsonv2` +
+        `&q=${encodeURIComponent(query)}` +
+        `&limit=6` +
+        `&accept-language=vi` +
+        `&viewbox=102.14,8.18,109.46,23.39` +  // bounding box Việt Nam
+        `&bounded=0`;                            // 0 = vẫn tìm ngoài viewbox nếu không có
+
+
+
+
+
+      const fetchP = fetch(url);
+      const timeoutP = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000));
+      const r = await Promise.race([fetchP, timeoutP]);
+
+
+      // Kiểm tra HTTP status trước khi parse JSON
+      if (!r.ok) {
+        if (r.status === 429) {
+          box.innerHTML = '<div class="item muted">⏳ Tìm quá nhanh, thử lại sau 2 giây...</div>';
+          // Tự retry sau 2s
+          setTimeout(() => searchSuggest(type, query), 2000);
         } else {
-          setDropoff(+item.lat, +item.lon, false, item.display_name);
+          box.innerHTML = `<div class="item muted">Lỗi máy chủ (${r.status}), thử lại.</div>`;
         }
-        box.style.display = 'none';
-        const inp = document.getElementById(type === 'pickup' ? 'pickupSearch' : 'dropoffSearch');
-        inp.value = parts[0];
-      };
-      box.appendChild(el);
-    });
-  } catch(e) { box.innerHTML = '<div class="item muted">Lỗi tìm kiếm</div>'; }
+        return;
+      }
+
+      const results = await r.json();
+
+      if (!results.length) {
+        box.innerHTML = '<div class="item muted">Không tìm thấy kết quả. Thử từ khoá khác.</div>';
+        return;
+      }
+
+      box.innerHTML = '';
+      results.forEach(item => {
+        const el = document.createElement('div');
+        el.className = 'item';
+        const parts = item.display_name.split(', ');
+        el.innerHTML = `<b>${parts[0]}</b><span class="sub">${parts.slice(1, 4).join(', ')}</span>`;
+        el.onclick = (ev) => {
+          ev.stopPropagation();
+          if (type === 'pickup') {
+            setPickup(+item.lat, +item.lon, true, item.display_name);
+          } else {
+            setDropoff(+item.lat, +item.lon, true, item.display_name);
+          }
+          box.style.display = 'none';
+          const inp = document.getElementById(type === 'pickup' ? 'pickupSearch' : 'dropoffSearch');
+          inp.value = parts[0];
+        };
+        box.appendChild(el);
+      });
+
+    } catch(err) {
+      if (err.name === 'AbortError') {
+        box.innerHTML = '<div class="item muted">Tìm kiếm quá lâu, kiểm tra mạng và thử lại.</div>';
+      } else {
+        box.innerHTML = '<div class="item muted">Không kết nối được. Kiểm tra mạng.</div>';
+        console.error('[UGo search]', err);
+      }
+    }
+  }, 400); // debounce 400ms
 }
 
 async function setPickup(lat, lng, locate = false, name = null) {
@@ -1063,10 +1114,12 @@ function wire() {
     r.addEventListener('change', (e) => { state.setMode = e.target.value; });
   });
 
-  document.getElementById('btnPickupSearch').onclick = () => {
+  document.getElementById('btnPickupSearch').onclick = (e) => {
+    e.stopPropagation();
     const q = document.getElementById('pickupSearch').value.trim(); if (q) searchSuggest('pickup', q);
   };
-  document.getElementById('btnDropoffSearch').onclick = () => {
+  document.getElementById('btnDropoffSearch').onclick = (e) => {
+    e.stopPropagation();
     const q = document.getElementById('dropoffSearch').value.trim(); if (q) searchSuggest('dropoff', q);
   };
   document.getElementById('pickupSearch').addEventListener('keydown', (e) => {
@@ -1079,8 +1132,10 @@ function wire() {
     ['pickupSuggest', 'dropoffSuggest'].forEach(id => {
       const box   = document.getElementById(id);
       const input = document.getElementById(id === 'pickupSuggest' ? 'pickupSearch' : 'dropoffSearch');
+      const btn   = document.getElementById(id === 'pickupSuggest' ? 'btnPickupSearch' : 'btnDropoffSearch');
       if (!box) return;
-      if (box.contains(e.target) || input.contains(e.target)) return;
+      // Không ẩn nếu click vào: dropdown, input, hoặc nút tìm kiếm
+      if (box.contains(e.target) || input.contains(e.target) || (btn && btn.contains(e.target))) return;
       box.style.display = 'none';
     });
   });
