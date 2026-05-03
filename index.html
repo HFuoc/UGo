@@ -1,0 +1,1171 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UGo – App Xe Ôm Công Nghệ (Frontend)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+/* ===== UGo – style.css (redesigned) ===== */
+:root {
+  --ugo-green: #1e6654;
+  --ugo-green-dark: #134840;
+  --ugo-green-glow: rgba(30,102,84,.25);
+  --fg-bg: #0c0c0c;
+  --fg-surface: #161616;
+  --fg-surface2: #1e1e1e;
+  --fg-border: #2a2a2a;
+  --fg-dark: #e8e8e8;
+  --fg-muted: #888;
+  --accent: #0ea271;
+  --danger: #ef4444;
+  --amber: #f59e0b;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: 'Be Vietnam Pro', 'Roboto', sans-serif;
+  background: var(--fg-bg);
+  color: var(--fg-dark);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.5;
+}
+header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  background: var(--ugo-green);
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 800;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+#userArea { margin-left: auto; }
+.brand { display: flex; gap: 10px; align-items: center; font-weight: 800; letter-spacing: .3px; }
+.brand .logo {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: white;
+  color: var(--ugo-green);
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.container {
+  display: grid;
+  grid-template-columns: 370px 1fr;
+  gap: 10px;
+  padding: 10px;
+  flex: 1;
+  height: calc(100vh - 62px);
+  transition: grid-template-columns .3s ease;
+}
+.container.menu-closed { grid-template-columns: 1fr; }
+.container.menu-closed .side { display: none; }
+.container.menu-closed .mapwrap { min-height: calc(100vh - 72px); }
+@media (max-width: 980px) {
+  .container { grid-template-columns: 1fr; height: auto; }
+  .side { order: 2; }
+  .mapwrap { order: 1; height: 60vh; }
+}
+.card {
+  background: var(--fg-surface);
+  border-radius: 14px;
+  border: 1px solid var(--fg-border);
+  padding: 14px;
+}
+.section-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--ugo-green);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+.muted { color: var(--fg-muted); }
+.mini { font-size: 12px; }
+.row { display: flex; gap: 8px; align-items: center; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stack { display: grid; gap: 8px; }
+input, select {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--fg-border);
+  border-radius: 10px;
+  outline: none;
+  background: var(--fg-surface2);
+  color: var(--fg-dark);
+  font-family: inherit;
+  font-size: 13px;
+  transition: border-color .15s;
+}
+input:focus, select:focus { border-color: var(--ugo-green); }
+input[type="range"] { padding: 0; accent-color: var(--ugo-green); height: 4px; cursor: pointer; }
+label { font-size: 11px; color: #999; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
+small { color: var(--fg-muted); }
+.btn {
+  border: 0;
+  border-radius: 10px;
+  padding: 9px 14px;
+  font-weight: 700;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity .15s, transform .1s;
+}
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.btn.primary { background: var(--ugo-green); color: white; }
+.btn.primary:hover:not(:disabled) { background: var(--ugo-green-dark); }
+.btn.ghost { background: var(--fg-surface2); border: 1px solid var(--fg-border); color: var(--fg-dark); }
+.btn.ghost:hover:not(:disabled) { background: #252525; }
+.btn.danger { background: var(--danger); color: #fff; }
+.btn.success { background: var(--accent); color: #fff; }
+.btn.btn-sm { padding: 7px 11px; font-size: 12px; }
+.mapwrap { min-height: 72vh; }
+#map { width: 100%; height: 100%; min-height: 340px; border-radius: 12px; }
+.side {
+  overflow-y: auto;
+  max-height: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a2a transparent;
+}
+.side::-webkit-scrollbar { width: 4px; }
+.side::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 4px; }
+.pickup-dot { color: #dc2626; font-size: 10px; }
+.dropoff-dot { color: #059669; font-size: 10px; }
+.pickup-label { color: #dc2626; font-weight: 700; }
+.dropoff-label { color: #059669; font-weight: 700; }
+.map-mode-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--fg-surface2);
+  border-radius: 10px;
+  border: 1px solid var(--fg-border);
+}
+.mode-radio { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 12px; font-weight: 700; }
+.route-stats {
+  display: flex;
+  align-items: stretch;
+  background: var(--fg-surface2);
+  border: 1px solid var(--fg-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.rs-item { flex: 1; padding: 10px 12px; text-align: center; }
+.rs-val { font-size: 16px; font-weight: 800; color: var(--fg-dark); letter-spacing: -.01em; }
+.rs-lbl { font-size: 10px; color: var(--fg-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; margin-top: 2px; }
+.rs-sep { width: 1px; background: var(--fg-border); margin: 8px 0; }
+.vehicle-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+.v-card {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 10px 6px; border-radius: 10px; border: 1px solid var(--fg-border);
+  background: var(--fg-surface2); cursor: pointer; text-align: center;
+  transition: border-color .15s, background .15s; user-select: none;
+}
+.v-card:hover { border-color: #3a3a3a; background: #222; }
+.v-card.active {
+  border-color: var(--ugo-green);
+  background: rgba(30,102,84,.12);
+  box-shadow: 0 0 0 1px var(--ugo-green) inset;
+}
+.v-icon { font-size: 22px; }
+.v-name { font-size: 12px; font-weight: 700; color: var(--fg-dark); }
+.v-price { font-size: 11px; color: var(--fg-muted); }
+.traffic-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--fg-muted); font-weight: 600; margin-top: -4px; }
+.price-hero {
+  display: flex; justify-content: space-between; align-items: flex-end; gap: 10px;
+  margin: 12px 0 10px; padding: 14px; border-radius: 12px;
+  background: linear-gradient(140deg, #0b2820 0%, #173d30 100%);
+  border: 1px solid rgba(30,102,84,.5);
+}
+.ph-left { flex: 1; min-width: 0; }
+.ph-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #6ee7b7; margin-bottom: 4px; }
+.ph-value { font-size: 24px; font-weight: 900; color: #fff; letter-spacing: -.03em; line-height: 1; }
+.ph-sub { font-size: 11px; color: rgba(255,255,255,.5); margin-top: 5px; }
+.ph-surge-wrap { flex-shrink: 0; }
+.ph-surge {
+  font-size: 11px; font-weight: 800; padding: 4px 9px; border-radius: 999px;
+  border: 1px solid; background: rgba(110,231,183,.08); color: #6ee7b7;
+  border-color: rgba(110,231,183,.3); letter-spacing: .03em;
+}
+.breakdown-table { display: grid; gap: 4px; }
+.brow { display: flex; justify-content: space-between; align-items: center; padding: 7px 10px; border-radius: 8px; background: var(--fg-surface2); }
+.bkey { font-size: 12px; color: var(--fg-muted); }
+.bval { font-size: 13px; font-weight: 700; color: var(--fg-dark); }
+.surge-val { color: var(--amber); }
+.highlight-discount { background: rgba(16,185,129,.05); }
+.discount-val { color: #10b981; }
+.total-row { background: rgba(30,102,84,.12); border: 1px solid rgba(30,102,84,.3); }
+.total-val { font-size: 15px; color: #6ee7b7; font-weight: 900; }
+.pay-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.tagpay {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 10px 8px; border-radius: 10px; border: 1px solid var(--fg-border);
+  background: var(--fg-surface2); cursor: pointer; font-size: 12px; font-weight: 700;
+  color: var(--fg-dark); transition: border-color .15s, background .15s; user-select: none;
+}
+.tagpay:hover { border-color: #3a3a3a; background: #222; }
+.tagpay.selected {
+  border-color: var(--ugo-green);
+  background: rgba(30,102,84,.12);
+  box-shadow: 0 0 0 1px var(--ugo-green) inset;
+}
+.pay-icon { font-size: 20px; }
+.momo-logo {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 5px; background: #e6173e;
+  color: #fff; font-weight: 900; font-size: 13px;
+}
+.voucher-row { display: flex; gap: 8px; align-items: center; }
+.voucher-row select { flex: 1; }
+.voucher-row .btn { white-space: nowrap; }
+.voucher-applied {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 12px; background: rgba(16,185,129,.08);
+  border: 1px solid rgba(16,185,129,.35); border-radius: 10px;
+}
+.va-code { font-size: 13px; font-weight: 800; color: #10b981; }
+.va-desc { font-size: 11px; color: var(--fg-muted); margin-top: 2px; }
+.va-check { font-size: 18px; color: #10b981; font-weight: 900; flex-shrink: 0; }
+.booking-steps { display: flex; align-items: flex-start; gap: 0; padding: 4px 0 8px; }
+.bstep { display: flex; flex-direction: column; align-items: center; gap: 5px; flex-shrink: 0; }
+.bstep-dot {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; border: 2px solid var(--fg-border);
+  background: var(--fg-surface2); color: var(--fg-muted); transition: all .25s;
+}
+.bstep-lbl { font-size: 10px; color: var(--fg-muted); font-weight: 600; text-align: center; white-space: nowrap; }
+.bstep-line { flex: 1; height: 2px; background: var(--fg-border); margin-top: 13px; transition: background .25s; }
+.bstep-line.done { background: var(--ugo-green); }
+.bstep.done .bstep-dot { background: var(--ugo-green); border-color: var(--ugo-green); color: #fff; }
+.bstep.done .bstep-lbl { color: var(--ugo-green); }
+.bstep.active .bstep-dot { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 0 3px rgba(14,162,113,.25); }
+.bstep.active .bstep-lbl { color: var(--accent); font-weight: 800; }
+.driver-card-empty { padding: 12px; border: 1px dashed var(--fg-border); border-radius: 10px; text-align: center; color: var(--fg-muted); font-size: 13px; }
+.driver-card-new { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--fg-surface2); border: 1px solid var(--fg-border); border-radius: 10px; }
+.dav { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--ugo-green), var(--accent)); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: #fff; flex-shrink: 0; }
+.dinfo { flex: 1; min-width: 0; }
+.dname { font-size: 13px; font-weight: 700; color: var(--fg-dark); margin-bottom: 2px; }
+.dmeta { font-size: 11px; color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.drating { font-size: 13px; font-weight: 800; color: var(--amber); flex-shrink: 0; }
+.btn-group { display: flex; gap: 8px; }
+.btn-book { flex: 1; font-size: 14px; padding: 11px 14px; }
+.status-bar { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: var(--fg-surface2); border-radius: 8px; }
+.status { font-weight: 800; color: var(--fg-dark); font-size: 13px; }
+.driver-marker { position: relative; width: 36px; height: 36px; transform: translateY(-6px); }
+.driver-marker .dot {
+  width: 24px; height: 24px; border-radius: 9999px; background: var(--ugo-green);
+  border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+}
+.driver-marker .badge {
+  position: absolute; left: 50%; top: 100%; transform: translate(-50%,4px);
+  font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 999px;
+  background: #111827; color: #fff; white-space: nowrap;
+}
+.driver-marker.accept .badge { background: #2563eb; }
+.driver-marker.drive .badge { background: #f59e0b; }
+.driver-marker.done .badge { background: #16a34a; }
+.driver-marker.drive .pulse {
+  position: absolute; left: 50%; top: 50%; width: 24px; height: 24px;
+  border: 3px solid rgba(30,102,84,.5); border-radius: 9999px;
+  transform: translate(-50%,-50%); animation: pulse 1.4s ease-out infinite;
+}
+@keyframes pulse {
+  0%   { transform: translate(-50%,-50%) scale(1); opacity: .7; }
+  70%  { transform: translate(-50%,-50%) scale(1.8); opacity: 0; }
+  100% { opacity: 0; }
+}
+.suggest {
+  display: none; background: var(--fg-surface2); border: 1px solid var(--fg-border);
+  border-radius: 10px; margin-top: 4px; max-height: 180px; overflow: auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,.4); z-index: 100;
+}
+.suggest .item { padding: 8px 10px; cursor: pointer; font-size: 13px; line-height: 1.3; color: var(--fg-dark); border-bottom: 1px solid #222; }
+.suggest .item:last-child { border-bottom: none; }
+.suggest .item:hover { background: #252525; }
+.suggest .sub { color: var(--fg-muted); font-size: 11px; display: block; margin-top: 2px; }
+.modal { position: fixed; inset: 0; display: none; place-items: center; background: rgba(0,0,0,.55); z-index: 900; backdrop-filter: blur(2px); }
+.modal.open { display: grid; }
+.modal .box { width: min(520px, 94vw); background: var(--fg-surface); border: 1px solid var(--fg-border); border-radius: 16px; padding: 20px; box-shadow: 0 24px 64px rgba(0,0,0,.6); color: var(--fg-dark); }
+.modal .box h3 { margin: 0 0 8px; font-size: 18px; font-weight: 800; }
+.stars { display: flex; gap: 8px; font-size: 28px; cursor: pointer; }
+.star { filter: grayscale(1); opacity: .3; transition: opacity .15s; }
+.star.active { filter: none; opacity: 1; }
+footer { background: var(--fg-surface); border-top: 1px solid var(--fg-border); padding: 24px 16px; margin-top: auto; }
+.footer-content { max-width: 1200px; margin: 0 auto; }
+.footer-section h4 { font-size: 11px; font-weight: 800; color: var(--ugo-green); text-transform: uppercase; letter-spacing: .1em; margin: 0 0 12px; }
+.footer-info { display: grid; gap: 10px; }
+.info-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--fg-dark); }
+.info-label { font-weight: 600; color: var(--fg-muted); min-width: 130px; }
+.info-item a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.info-item a:hover { color: var(--ugo-green); text-decoration: underline; }
+.footer-divider { height: 1px; background: var(--fg-border); margin: 16px 0; }
+.footer-bottom { text-align: center; font-size: 12px; color: var(--fg-muted); }
+.footer-bottom p { margin: 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <button type="button" class="btn ghost" id="btnToggleMenu" title="Bật/Tắt menu">☰ Menu</button>
+    <div class="brand">
+      <div class="logo">UG</div>
+      <div>
+        <div>UGo</div>
+        <small class="muted">Giải pháp di chuyển dành cho UEHer</small>
+      </div>
+    </div>
+    <div class="row" id="userArea">
+      <div class="muted mini" id="hello">Chưa đăng nhập</div>
+      <button type="button" class="btn ghost" id="btnLogin">Đăng nhập</button>
+      <button type="button" class="btn ghost" id="btnLogout" style="display:none">Đăng xuất</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <aside class="side stack">
+      <!-- SECTION 1 -->
+      <section class="card">
+        <div class="section-title"><span class="step-num">1</span> Điểm đón / Điểm đến</div>
+        <div class="stack">
+          <div class="grid">
+            <div class="stack">
+              <label><span class="pickup-dot">●</span> Điểm đón <small class="muted">— nhấp map hoặc tìm</small></label>
+              <input id="pickupSearch" placeholder="VD: 2 Hải Triều, Quận 1" />
+              <button type="button" class="btn ghost btn-sm" id="btnPickupSearch">Tìm điểm đón</button>
+              <div id="pickupSuggest" class="suggest"></div>
+            </div>
+            <div class="stack">
+              <label><span class="dropoff-dot">●</span> Điểm đến <small class="muted">— nhấp map hoặc tìm</small></label>
+              <input id="dropoffSearch" placeholder="VD: Bến xe Miền Đông" />
+              <button type="button" class="btn ghost btn-sm" id="btnDropoffSearch">Tìm điểm đến</button>
+              <div id="dropoffSuggest" class="suggest"></div>
+            </div>
+          </div>
+          <div class="map-mode-bar">
+            <span class="muted mini">Click map đặt:</span>
+            <label class="mode-radio"><input type="radio" name="setMode" value="pickup" checked /> <span class="pickup-label">Pickup</span></label>
+            <label class="mode-radio"><input type="radio" name="setMode" value="dropoff" /> <span class="dropoff-label">Dropoff</span></label>
+            <button type="button" class="btn ghost btn-sm" id="btnSwap">⇄ Đổi chỗ</button>
+            <button type="button" class="btn ghost btn-sm" id="btnLocate">📍 Vị trí của tôi</button>
+          </div>
+          <div class="route-stats">
+            <div class="rs-item"><div class="rs-val" id="txtDistance">—</div><div class="rs-lbl">Khoảng cách</div></div>
+            <div class="rs-sep"></div>
+            <div class="rs-item"><div class="rs-val" id="txtEta">—</div><div class="rs-lbl">Thời gian</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 2 -->
+      <section class="card">
+        <div class="section-title"><span class="step-num">2</span> Loại xe & Giá ước tính</div>
+        <div class="vehicle-grid" id="vehicleGrid">
+          <div class="v-card active" data-vehicle="bike" onclick="selectVehicle('bike')">
+            <span class="v-icon">🏍️</span><span class="v-name">Bike</span><span class="v-price">7k/km</span>
+          </div>
+          <div class="v-card" data-vehicle="car" onclick="selectVehicle('car')">
+            <span class="v-icon">🚗</span><span class="v-name">Car</span><span class="v-price">11k/km</span>
+          </div>
+          <div class="v-card" data-vehicle="suv" onclick="selectVehicle('suv')">
+            <span class="v-icon">🚙</span><span class="v-name">SUV</span><span class="v-price">15k/km</span>
+          </div>
+        </div>
+        <select id="vehicle" style="display:none">
+          <option value="bike">Bike</option>
+          <option value="car">Car</option>
+          <option value="suv">SUV</option>
+        </select>
+        <div class="grid" style="margin-top:10px">
+          <div class="stack">
+            <label>Thời tiết</label>
+            <select id="weather">
+              <option value="clear">☀️ Bình thường</option>
+              <option value="rain">🌧️ Mưa</option>
+              <option value="storm">⛈️ Bão</option>
+            </select>
+          </div>
+          <div class="stack">
+            <label>Mật độ giao thông: <b><span id="trafficVal">20</span>%</b></label>
+            <input type="range" id="traffic" min="0" max="100" value="20" />
+            <div class="traffic-labels"><span>Thông</span><span>Tắc</span></div>
+          </div>
+        </div>
+        <div class="price-hero" id="priceHero">
+          <div class="ph-left">
+            <div class="ph-label">Tổng ước tính</div>
+            <div class="ph-value" id="priceHeroValue">—</div>
+            <div class="ph-sub" id="priceHeroSub">Chọn điểm đón/đến để tính giá</div>
+          </div>
+          <div class="ph-surge-wrap"><div class="ph-surge" id="priceHeroSurge">Surge ×1.00</div></div>
+        </div>
+        <div class="breakdown-table">
+          <div class="brow"><span class="bkey">Base + km × hệ số xe</span><span class="bval" id="txtBreakdown">—</span></div>
+          <div class="brow"><span class="bkey">Surge ×</span><span class="bval surge-val" id="txtSurge">1.00×</span></div>
+          <div class="brow"><span class="bkey">Giá trước giảm</span><span class="bval" id="txtEstimate">—</span></div>
+          <div class="brow highlight-discount"><span class="bkey">Giảm giá (voucher)</span><span class="bval discount-val" id="txtDiscount">—</span></div>
+          <div class="brow total-row"><span class="bkey">Thanh toán</span><span class="bval total-val" id="txtTotal">—</span></div>
+        </div>
+      </section>
+
+      <!-- SECTION 3 -->
+      <section class="card">
+        <div class="section-title"><span class="step-num">3</span> Thanh toán & Khuyến mãi</div>
+        <div class="stack">
+          <label>Phương thức thanh toán</label>
+          <div class="pay-grid" id="payGroup">
+            <div class="tagpay selected" data-pay="cash"><span class="pay-icon">💵</span><span>Tiền mặt</span></div>
+            <div class="tagpay" data-pay="card"><span class="pay-icon">💳</span><span>Thẻ</span></div>
+            <div class="tagpay" data-pay="momo"><span class="momo-logo">M</span><span>MoMo</span></div>
+          </div>
+          <label>Voucher <small class="muted">(chọn 1 lần cho chuyến này)</small></label>
+          <div class="voucher-row">
+            <select id="voucher">
+              <option value="">— Chọn voucher —</option>
+              <option value="FAST10">FAST10 (−10%)</option>
+              <option value="MOMO15">MOMO15 (−15%, chỉ MoMo)</option>
+              <option value="RAIN20">RAIN20 (−20%, khi mưa/bão)</option>
+              <option value="NEW50K">NEW50K (−50.000đ)</option>
+            </select>
+            <button type="button" class="btn primary btn-sm" id="btnApplyVoucher">Áp dụng</button>
+          </div>
+          <div class="voucher-applied" id="voucherApplied" style="display:none">
+            <div><div class="va-code" id="vaCode">—</div><div class="va-desc" id="vaDesc">—</div></div>
+            <span class="va-check">✓</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 4 -->
+      <section class="card">
+        <div class="section-title"><span class="step-num">4</span> Đặt tài xế & Theo dõi</div>
+        <div class="stack">
+          <div class="booking-steps" id="bookingSteps">
+            <div class="bstep pending" id="bstep1"><div class="bstep-dot">1</div><div class="bstep-lbl">Đặt</div></div>
+            <div class="bstep-line" id="bline1"></div>
+            <div class="bstep pending" id="bstep2"><div class="bstep-dot">2</div><div class="bstep-lbl">Nhận</div></div>
+            <div class="bstep-line" id="bline2"></div>
+            <div class="bstep pending" id="bstep3"><div class="bstep-dot">3</div><div class="bstep-lbl">Chở</div></div>
+            <div class="bstep-line" id="bline3"></div>
+            <div class="bstep pending" id="bstep4"><div class="bstep-dot">4</div><div class="bstep-lbl">Xong</div></div>
+          </div>
+          <div id="driverCard" class="driver-card-empty"><span class="dc-empty-text">Chưa có tài xế</span></div>
+          <div class="btn-group">
+            <button type="button" class="btn primary btn-book" id="btnBook">🚖 Đặt tài xế</button>
+            <button type="button" class="btn danger" id="btnCancel" disabled>✕ Huỷ</button>
+            <button type="button" class="btn success" id="btnFinish" disabled>✓ Xong</button>
+          </div>
+          <div class="status-bar">
+            <span class="muted mini">Trạng thái</span>
+            <span class="status" id="txtStatus">Chưa đặt</span>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <main class="mapwrap card">
+      <div id="map"></div>
+    </main>
+  </div>
+
+  <!-- Login Modal -->
+  <div class="modal" id="loginModal" aria-hidden="true">
+    <div class="box">
+      <h3>Đăng nhập khách hàng</h3>
+      <p class="muted mini">Nhập tên và số điện thoại để hiển thị trên header (lưu localStorage).</p>
+      <div class="grid">
+        <div class="stack"><label>Tên</label><input id="loginName" placeholder="Nguyễn Văn A"/></div>
+        <div class="stack"><label>Số điện thoại</label><input id="loginPhone" placeholder="09xxxxxxxx"/></div>
+      </div>
+      <div class="row" style="margin-top:12px;justify-content:flex-end">
+        <button type="button" class="btn ghost" id="btnCloseLogin">Đóng</button>
+        <button type="button" class="btn primary" id="btnDoLogin">Đăng nhập</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rating Modal -->
+  <div class="modal" id="ratingModal" aria-hidden="true">
+    <div class="box">
+      <h3>Đánh giá chuyến đi</h3>
+      <div class="stars" id="stars">
+        <span class="star" data-val="1">★</span>
+        <span class="star" data-val="2">★</span>
+        <span class="star" data-val="3">★</span>
+        <span class="star" data-val="4">★</span>
+        <span class="star active" data-val="5">★</span>
+      </div>
+      <div class="stack" style="margin-top:8px">
+        <label>Lời nhắn</label>
+        <input id="ratingNote" placeholder="Rất hài lòng!"/>
+      </div>
+      <div class="row" style="margin-top:12px;justify-content:flex-end">
+        <button type="button" class="btn ghost" id="btnCloseRating">Đóng</button>
+        <button type="button" class="btn primary" id="btnSubmitRating">Gửi đánh giá</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-content">
+      <div class="footer-section">
+        <h4>Liên hệ nhà phát triển</h4>
+        <div class="footer-info">
+          <div class="info-item"><span class="info-label">📞 Số điện thoại:</span><a href="tel:+84879146749">+84 879 146 749</a></div>
+          <div class="info-item"><span class="info-label">📧 Email:</span><a href="mailto:phuocnguyen.31231021201@st.ueh.edu.vn">phuocnguyen.31231021201@st.ueh.edu.vn</a></div>
+          <div class="info-item"><span class="info-label">💼 Công ty:</span><span>UGo Technology</span></div>
+        </div>
+      </div>
+      <div class="footer-divider"></div>
+      <div class="footer-bottom"><p>&copy; 2026 UGo. Giải pháp di chuyển dành cho UEHer.</p></div>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+// ====== state.js ======
+const state = {
+  map: null,
+  pickup:  null,   // { lat, lng, name }
+  dropoff: null,
+  pickupMarker:  null,
+  dropoffMarker: null,
+  routeLayer:    null,
+  driverMarker:  null,
+  routeCoords:   [],
+  distanceKm:    0,
+  durationMin:   0,
+  speedMultiplier: 8,
+  setMode: 'pickup',
+  user: null,
+  pricing: {
+    vehicle: 'bike',
+    weather: 'clear',
+    traffic: 20,
+    payment: 'cash',
+    voucher: null,
+    voucherLocked: false,
+    surge: 1,
+    estimate: 0,
+    discount: 0,
+    total: 0,
+  },
+  booking: {
+    status: 'Chưa đặt',
+    driver: null,
+    animTimer: null,
+  }
+};
+
+// ====== Helpers ======
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function fmtVnd(n) { return Math.round(n).toLocaleString('vi-VN') + 'đ'; }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function distanceLL(a, b) {
+  const R = 6371000;
+  const dLat = (b[0]-a[0])*Math.PI/180;
+  const dLng = (b[1]-a[1])*Math.PI/180;
+  const x = Math.sin(dLat/2)**2 + Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+}
+function openModal(id)  { document.getElementById(id).classList.add('open');    document.getElementById(id).removeAttribute('aria-hidden'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); document.getElementById(id).setAttribute('aria-hidden','true'); }
+
+// ====== storage.js ======
+function saveRating(val, note) {
+  const trips = JSON.parse(localStorage.getItem('ugo_trips') || '[]');
+  trips.push({ date: new Date().toISOString(), rating: val, note, driver: state.booking.driver });
+  localStorage.setItem('ugo_trips', JSON.stringify(trips));
+}
+function loadUser() {
+  const raw = localStorage.getItem('ugo_user');
+  state.user = raw ? JSON.parse(raw) : null;
+  const hello   = document.getElementById('hello');
+  const btnIn   = document.getElementById('btnLogin');
+  const btnOut  = document.getElementById('btnLogout');
+  if (state.user) {
+    hello.textContent = 'Xin chào, ' + state.user.name;
+    btnIn.style.display  = 'none';
+    btnOut.style.display = '';
+  } else {
+    hello.textContent = 'Chưa đăng nhập';
+    btnIn.style.display  = '';
+    btnOut.style.display = 'none';
+  }
+}
+
+// ====== map.js ======
+const pickupIcon = L.divIcon({
+  html: '<div style="width:14px;height:14px;border-radius:50%;background:#dc2626;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)"></div>',
+  iconSize: [14,14], iconAnchor: [7,7], className: ''
+});
+const dropoffIcon = L.divIcon({
+  html: '<div style="width:14px;height:14px;border-radius:50%;background:#059669;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)"></div>',
+  iconSize: [14,14], iconAnchor: [7,7], className: ''
+});
+
+function driverDivIcon(mode) {
+  const pulse = mode === 'drive' ? '<div class="pulse"></div>' : '';
+  const labels = { accept:'Đang đến', drive:'Đang chở', done:'Hoàn tất' };
+  return L.divIcon({
+    html: `<div class="driver-marker ${mode}"><div class="dot"></div>${pulse}<div class="badge">${labels[mode]||''}</div></div>`,
+    iconSize: [36,50], iconAnchor: [18,18], className: ''
+  });
+}
+function updateDriverIcon(mode) {
+  if (state.driverMarker) state.driverMarker.setIcon(driverDivIcon(mode));
+}
+
+function initMap() {
+  state.map = L.map('map', { zoomControl: true }).setView([10.7769, 106.7009], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19
+  }).addTo(state.map);
+
+  state.map.on('click', (e) => {
+    const { lat, lng } = e.latlng;
+    if (state.setMode === 'pickup') setPickup(lat, lng);
+    else setDropoff(lat, lng);
+  });
+}
+
+function showMapLoadError(e) {
+  const m = document.getElementById('map');
+  m.innerHTML = '<div style="padding:20px;color:#ef4444">Lỗi tải bản đồ: ' + (e && e.message || e) + '</div>';
+}
+
+async function reverseGeocode(lat, lng) {
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=vi`);
+    const d = await r.json();
+    return d.display_name || (lat.toFixed(5) + ', ' + lng.toFixed(5));
+  } catch { return lat.toFixed(5) + ', ' + lng.toFixed(5); }
+}
+
+async function searchSuggest(type, query) {
+  const suggestId = type === 'pickup' ? 'pickupSuggest' : 'dropoffSuggest';
+  const box = document.getElementById(suggestId);
+  box.innerHTML = '<div class="item muted">Đang tìm...</div>';
+  box.style.display = 'block';
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=vn&accept-language=vi`;
+    const r = await fetch(url);
+    const results = await r.json();
+    if (!results.length) { box.innerHTML = '<div class="item muted">Không tìm thấy kết quả</div>'; return; }
+    box.innerHTML = '';
+    results.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'item';
+      const parts = item.display_name.split(', ');
+      el.innerHTML = `<b>${parts[0]}</b><span class="sub">${parts.slice(1).join(', ')}</span>`;
+      el.onclick = () => {
+        if (type === 'pickup') {
+          setPickup(+item.lat, +item.lon, false, item.display_name);
+        } else {
+          setDropoff(+item.lat, +item.lon, false, item.display_name);
+        }
+        box.style.display = 'none';
+        const inp = document.getElementById(type === 'pickup' ? 'pickupSearch' : 'dropoffSearch');
+        inp.value = parts[0];
+      };
+      box.appendChild(el);
+    });
+  } catch(e) { box.innerHTML = '<div class="item muted">Lỗi tìm kiếm</div>'; }
+}
+
+async function setPickup(lat, lng, locate = false, name = null) {
+  if (!name) name = await reverseGeocode(lat, lng);
+  state.pickup = { lat, lng, name };
+  document.getElementById('pickupSearch').value = name.split(',')[0];
+  if (!state.pickupMarker) {
+    state.pickupMarker = L.marker([lat, lng], { icon: pickupIcon }).addTo(state.map).bindPopup('Điểm đón: ' + name);
+  } else {
+    state.pickupMarker.setLatLng([lat, lng]).setPopupContent('Điểm đón: ' + name);
+  }
+  if (locate) state.map.setView([lat, lng], 15);
+  tryRoute();
+}
+
+async function setDropoff(lat, lng, locate = false, name = null) {
+  if (!name) name = await reverseGeocode(lat, lng);
+  state.dropoff = { lat, lng, name };
+  document.getElementById('dropoffSearch').value = name.split(',')[0];
+  if (!state.dropoffMarker) {
+    state.dropoffMarker = L.marker([lat, lng], { icon: dropoffIcon }).addTo(state.map).bindPopup('Điểm đến: ' + name);
+  } else {
+    state.dropoffMarker.setLatLng([lat, lng]).setPopupContent('Điểm đến: ' + name);
+  }
+  if (locate) state.map.setView([lat, lng], 15);
+  tryRoute();
+}
+
+async function osrmRoute(from, to) {
+  const url = `https://router.project-osrm.org/route/v1/driving/${from[1]},${from[0]};${to[1]},${to[0]}?overview=full&geometries=geojson`;
+  const r = await fetch(url);
+  const d = await r.json();
+  if (!d.routes || !d.routes[0]) throw new Error('No route');
+  const coords = d.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+  return { coords, distance: d.routes[0].distance, duration: d.routes[0].duration };
+}
+
+async function tryRoute() {
+  if (!state.pickup || !state.dropoff) return;
+  const p = state.pickup, d = state.dropoff;
+
+  try {
+    const result = await osrmRoute([p.lat, p.lng], [d.lat, d.lng]);
+    state.routeCoords = result.coords;
+    state.distanceKm  = result.distance / 1000;
+    state.durationMin = result.duration / 60;
+
+    document.getElementById('txtDistance').textContent = state.distanceKm.toFixed(2) + ' km';
+    document.getElementById('txtEta').textContent      = Math.ceil(state.durationMin) + ' phút';
+
+    if (state.routeLayer) state.map.removeLayer(state.routeLayer);
+    state.routeLayer = L.polyline(result.coords, { color: '#0ea271', weight: 5, opacity: .75 }).addTo(state.map);
+    state.map.fitBounds(state.routeLayer.getBounds(), { padding: [40, 40] });
+  } catch(e) {
+    // Fallback: straight line
+    const dist = distanceLL([p.lat, p.lng], [d.lat, d.lng]);
+    state.distanceKm  = dist / 1000;
+    state.durationMin = dist / 1000 / 25 * 60;
+    state.routeCoords = [[p.lat, p.lng], [d.lat, d.lng]];
+
+    document.getElementById('txtDistance').textContent = state.distanceKm.toFixed(2) + ' km';
+    document.getElementById('txtEta').textContent      = Math.ceil(state.durationMin) + ' phút';
+
+    if (state.routeLayer) state.map.removeLayer(state.routeLayer);
+    state.routeLayer = L.polyline(state.routeCoords, { color: '#0ea271', weight: 4, opacity: .6, dashArray: '8,6' }).addTo(state.map);
+    state.map.fitBounds(state.routeLayer.getBounds(), { padding: [60, 60] });
+  }
+  recalcPrice();
+}
+
+// ====== animation.js ======
+function animateAlongRoad(coords, mps, onDone, mode) {
+  let segIdx = 0, segProgress = 0;
+  let last = null;
+
+  function step(ts) {
+    if (!last) { last = ts; state.booking.animTimer = requestAnimationFrame(step); return; }
+    const dt = (ts - last) / 1000; last = ts;
+
+    let dist = mps * dt;
+    while (dist > 0 && segIdx < coords.length - 1) {
+      const from = coords[segIdx], to = coords[segIdx + 1];
+      const segLen = distanceLL(from, to);
+      const remaining = segLen * (1 - segProgress);
+      if (dist >= remaining) {
+        dist -= remaining; segIdx++; segProgress = 0;
+      } else {
+        segProgress += dist / segLen; dist = 0;
+      }
+    }
+
+    if (segIdx >= coords.length - 1) {
+      state.driverMarker && state.driverMarker.setLatLng(coords[coords.length - 1]);
+      onDone(); return;
+    }
+
+    const from = coords[segIdx], to = coords[segIdx + 1];
+    const lat = from[0] + (to[0] - from[0]) * segProgress;
+    const lng = from[1] + (to[1] - from[1]) * segProgress;
+    state.driverMarker && state.driverMarker.setLatLng([lat, lng]);
+
+    state.booking.animTimer = requestAnimationFrame(step);
+  }
+  state.booking.animTimer = requestAnimationFrame(step);
+}
+
+// ====== pricing.js ======
+function recalcPrice() {
+  const dkm     = state.distanceKm;
+  const vehicle = state.pricing.vehicle;
+  const traffic = state.pricing.traffic;
+  const weather = state.pricing.weather;
+  const v = {
+    bike: { base:5000,  perkm:7000,  factor:1.0 },
+    car:  { base:10000, perkm:11000, factor:1.3 },
+    suv:  { base:15000, perkm:15000, factor:1.6 }
+  }[vehicle];
+
+  const t   = traffic;
+  const muL = clamp((30 - t) / 30, 0, 1);
+  const muM = clamp(1 - Math.abs(t - 50) / 20, 0, 1);
+  const muH = clamp((t - 70) / 30, 0, 1);
+
+  const wClear = weather === 'clear' ? 1 : 0;
+  const wRain  = weather === 'rain'  ? 1 : 0;
+  const wStorm = weather === 'storm' ? 1 : 0;
+
+  const sLow  = 1.0*wClear + 1.1*(wRain||wStorm);
+  const sMed  = 1.2*wClear + 1.3*wRain + 1.4*wStorm;
+  const sHigh = 1.5*wClear + 1.7*wRain + 1.9*wStorm;
+
+  let surge = (muL*(sLow||1.0) + muM*(sMed||1.2) + muH*(sHigh||1.5)) / (muL + muM + muH || 1);
+  surge = clamp(surge, 1.0, 2.5);
+
+  const subtotal = (v.base + dkm * v.perkm) * v.factor * surge;
+
+  const voucher = state.pricing.voucher;
+  const pay     = state.pricing.payment;
+  let discount  = 0;
+  if (voucher) {
+    if (voucher === 'FAST10')                                               discount = 0.10 * subtotal;
+    if (voucher === 'MOMO15' && pay === 'momo')                             discount = 0.15 * subtotal;
+    if (voucher === 'RAIN20' && (weather === 'rain' || weather === 'storm')) discount = 0.20 * subtotal;
+    if (voucher === 'NEW50K')                                               discount = 50000;
+  }
+  const total = Math.max(0, subtotal - discount);
+
+  state.pricing.surge    = surge;
+  state.pricing.estimate = subtotal;
+  state.pricing.discount = discount;
+  state.pricing.total    = total;
+
+  document.getElementById('txtSurge').textContent     = surge.toFixed(2) + '×';
+  document.getElementById('txtBreakdown').textContent = fmtVnd(v.base) + ' + ' + fmtVnd(v.perkm) + '/km × ' + v.factor.toFixed(1);
+  document.getElementById('txtEstimate').textContent  = dkm > 0 ? fmtVnd(subtotal) : '—';
+  document.getElementById('txtDiscount').textContent  = discount > 0 ? '− ' + fmtVnd(discount) : '—';
+  document.getElementById('txtTotal').textContent     = dkm > 0 ? fmtVnd(total) : '—';
+
+  const heroValue  = document.getElementById('priceHeroValue');
+  const heroSub    = document.getElementById('priceHeroSub');
+  const heroSurge  = document.getElementById('priceHeroSurge');
+  if (heroValue) heroValue.textContent = dkm > 0 ? fmtVnd(total) : '—';
+  if (heroSurge) heroSurge.textContent = 'Surge ×' + surge.toFixed(2);
+  if (heroSub) {
+    if (dkm <= 0) heroSub.textContent = 'Chọn điểm đón/đến để tính giá';
+    else if (discount > 0 && voucher) heroSub.textContent = 'Đã giảm ' + fmtVnd(discount) + ' (voucher ' + voucher + ')';
+    else heroSub.textContent = vehicle.toUpperCase() + ' • ' + dkm.toFixed(2) + ' km';
+  }
+  if (heroSurge) {
+    heroSurge.style.color       = surge >= 1.5 ? '#fbbf24' : surge >= 1.2 ? '#fb923c' : '#6ee7b7';
+    heroSurge.style.borderColor = surge >= 1.5 ? 'rgba(245,158,11,.4)' : surge >= 1.2 ? 'rgba(251,146,60,.4)' : 'rgba(110,231,183,.3)';
+    heroSurge.style.background  = surge >= 1.5 ? 'rgba(245,158,11,.12)' : surge >= 1.2 ? 'rgba(251,146,60,.1)' : 'rgba(110,231,183,.08)';
+  }
+}
+
+function recommendVoucherCode() {
+  const pay     = state.pricing.payment;
+  const weather = state.pricing.weather;
+  if (weather === 'rain' || weather === 'storm') return 'RAIN20';
+  if (pay === 'momo') return 'MOMO15';
+  return '';
+}
+function maybeSuggestVoucher() {
+  if (state.pricing.voucherLocked) return;
+  const rec = recommendVoucherCode();
+  const sel = document.getElementById('voucher');
+  const btn = document.getElementById('btnApplyVoucher');
+  if (!sel) return;
+  sel.value = rec || '';
+  if (btn) btn.disabled = false;
+}
+function resetVoucherUI() {
+  const sel     = document.getElementById('voucher');
+  const btn     = document.getElementById('btnApplyVoucher');
+  const applied = document.getElementById('voucherApplied');
+  const vrow    = document.querySelector('.voucher-row');
+  state.pricing.voucher       = null;
+  state.pricing.voucherLocked = false;
+  if (sel) { sel.disabled = false; sel.value = ''; }
+  if (btn) { btn.disabled = false; }
+  if (applied) applied.style.display = 'none';
+  if (vrow)    vrow.style.display    = 'flex';
+  maybeSuggestVoucher();
+  recalcPrice();
+}
+function showVoucherApplied(code) {
+  const applied = document.getElementById('voucherApplied');
+  const vrow    = document.querySelector('.voucher-row');
+  const vaCode  = document.getElementById('vaCode');
+  const vaDesc  = document.getElementById('vaDesc');
+  const descriptions = {
+    'FAST10': 'Giảm 10% cho chuyến này',
+    'MOMO15': 'Giảm 15% khi thanh toán MoMo',
+    'RAIN20': 'Giảm 20% khi trời mưa / bão',
+    'NEW50K': 'Giảm thẳng 50.000đ'
+  };
+  if (vaCode) vaCode.textContent = code + ' đã áp dụng';
+  if (vaDesc) vaDesc.textContent = descriptions[code] || '';
+  if (applied) applied.style.display = 'flex';
+  if (vrow)    vrow.style.display    = 'none';
+}
+
+// ====== booking.js ======
+function setStatus(s) {
+  state.booking.status = s;
+  document.getElementById('txtStatus').textContent = s;
+  const stepMap = { 'Đang tìm':1, 'Đã nhận cuốc':2, 'Đang chở':3, 'Đã hoàn tất':4, 'Đã huỷ':0 };
+  const active = stepMap[s] ?? 0;
+  for (let i = 1; i <= 4; i++) {
+    const step = document.getElementById('bstep' + i);
+    const dot  = step && step.querySelector('.bstep-dot');
+    if (!step || !dot) continue;
+    step.classList.remove('done', 'active', 'pending');
+    if (i < active)       { step.classList.add('done');    dot.textContent = '✓'; }
+    else if (i === active) { step.classList.add('active');  dot.textContent = i;   }
+    else                   { step.classList.add('pending'); dot.textContent = i;   }
+  }
+  for (let i = 1; i <= 3; i++) {
+    const line = document.getElementById('bline' + i);
+    if (line) line.classList.toggle('done', i < active);
+  }
+}
+
+function randomDriver() {
+  const pool = [
+    { name:'Nguyễn Văn Tèo', plate:'59A1-123.45', vehicle:'Wave Alpha', rating:4.92, phone:'0909 123 456' },
+    { name:'Trần Thị Bưởi',  plate:'51F-888.68',  vehicle:'Vision',     rating:4.85, phone:'0707 555 666' },
+    { name:'Lê Hoàng',       plate:'60B-222.33',  vehicle:'Exciter',    rating:4.97, phone:'0933 777 888' }
+  ];
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function showDriverCard() {
+  const d  = state.booking.driver;
+  const el = document.getElementById('driverCard');
+  if (!d) {
+    el.className = 'driver-card-empty';
+    el.innerHTML = '<span class="dc-empty-text">Chưa có tài xế</span>';
+    return;
+  }
+  const initials = d.name.split(' ').map(w => w[0]).join('').slice(-2).toUpperCase();
+  el.className = 'driver-card-new';
+  el.innerHTML =
+    '<div class="dav">' + initials + '</div>' +
+    '<div class="dinfo">' +
+      '<div class="dname">' + d.name + '</div>' +
+      '<div class="dmeta">' + d.vehicle + ' • ' + d.plate + ' • 📞 ' + d.phone + '</div>' +
+    '</div>' +
+    '<div class="drating">⭐ ' + d.rating + '</div>';
+}
+
+function resetDriver() {
+  if (state.driverMarker) { state.map.removeLayer(state.driverMarker); state.driverMarker = null; }
+  if (state.booking.animTimer) { cancelAnimationFrame(state.booking.animTimer); state.booking.animTimer = null; }
+  state.booking.driver = null;
+  showDriverCard();
+  document.getElementById('btnCancel').disabled = true;
+  document.getElementById('btnFinish').disabled = true;
+  setStatus('Chưa đặt');
+  resetVoucherUI();
+}
+
+async function bookDriver() {
+  if (!state.routeCoords.length) { alert('Vui lòng chọn điểm đón/điểm đến để tính tuyến.'); return; }
+  setStatus('Đang tìm');
+  const btn = document.getElementById('btnBook'); btn.disabled = true;
+  document.getElementById('btnCancel').disabled = false;
+
+  await sleep(600);
+  state.booking.driver = randomDriver();
+  showDriverCard();
+  setStatus('Đã nhận cuốc');
+
+  const pk     = state.routeCoords[0];
+  const offset = 0.0015;
+  const driverStart = [pk[0] + (Math.random() - .5) * offset, pk[1] + (Math.random() - .5) * offset];
+
+  if (!state.driverMarker) {
+    state.driverMarker = L.marker(driverStart, { icon: driverDivIcon('accept') }).addTo(state.map);
+  } else {
+    state.driverMarker.setLatLng(driverStart);
+    updateDriverIcon('accept');
+  }
+
+  let approach;
+  try {
+    approach = await osrmRoute(driverStart, pk);
+  } catch(e) {
+    const d = distanceLL(driverStart, pk);
+    approach = { coords:[driverStart, pk], distance:d, duration:Math.max(8, d/8) };
+  }
+  const approachMps = Math.max(4, approach.distance / Math.max(approach.duration, 1)) * state.speedMultiplier;
+  await new Promise(res => animateAlongRoad(approach.coords, approachMps, res, 'accept'));
+
+  setStatus('Đang chở');
+  updateDriverIcon('drive');
+
+  const rideMps = (state.distanceKm * 1000) / Math.max(state.durationMin * 60, 1) * state.speedMultiplier;
+  await new Promise(res => animateAlongRoad(state.routeCoords, rideMps, res, 'drive'));
+
+  setStatus('Đã hoàn tất');
+  updateDriverIcon('done');
+  document.getElementById('btnFinish').disabled = false;
+  openModal('ratingModal');
+}
+
+function cancelTrip() {
+  setStatus('Đã huỷ');
+  resetDriver();
+  document.getElementById('btnBook').disabled = false;
+}
+
+// ====== app.js ======
+function selectVehicle(v) {
+  document.querySelectorAll('.v-card').forEach(c =>
+    c.classList.toggle('active', c.dataset.vehicle === v)
+  );
+  const sel = document.getElementById('vehicle');
+  sel.value = v;
+  sel.dispatchEvent(new Event('change'));
+}
+
+function wire() {
+  document.getElementById('btnToggleMenu').onclick = () => {
+    document.querySelector('.container').classList.toggle('menu-closed');
+  };
+  document.getElementById('btnLogin').onclick     = () => openModal('loginModal');
+  document.getElementById('btnCloseLogin').onclick = () => closeModal('loginModal');
+  document.getElementById('btnLogout').onclick    = () => {
+    localStorage.removeItem('ugo_user'); state.user = null; loadUser();
+  };
+  document.getElementById('btnDoLogin').onclick   = () => {
+    const name  = document.getElementById('loginName').value.trim();
+    const phone = document.getElementById('loginPhone').value.trim();
+    if (!name || !phone) { alert('Nhập đầy đủ tên & số điện thoại'); return; }
+    localStorage.setItem('ugo_user', JSON.stringify({ name, phone }));
+    closeModal('loginModal'); loadUser();
+  };
+
+  document.querySelectorAll('input[name="setMode"]').forEach(r => {
+    r.addEventListener('change', (e) => { state.setMode = e.target.value; });
+  });
+
+  document.getElementById('btnPickupSearch').onclick = () => {
+    const q = document.getElementById('pickupSearch').value.trim(); if (q) searchSuggest('pickup', q);
+  };
+  document.getElementById('btnDropoffSearch').onclick = () => {
+    const q = document.getElementById('dropoffSearch').value.trim(); if (q) searchSuggest('dropoff', q);
+  };
+  document.getElementById('pickupSearch').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { const q = e.target.value.trim(); if (q) searchSuggest('pickup', q); }
+  });
+  document.getElementById('dropoffSearch').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { const q = e.target.value.trim(); if (q) searchSuggest('dropoff', q); }
+  });
+  document.addEventListener('click', (e) => {
+    ['pickupSuggest', 'dropoffSuggest'].forEach(id => {
+      const box   = document.getElementById(id);
+      const input = document.getElementById(id === 'pickupSuggest' ? 'pickupSearch' : 'dropoffSearch');
+      if (!box) return;
+      if (box.contains(e.target) || input.contains(e.target)) return;
+      box.style.display = 'none';
+    });
+  });
+
+  document.getElementById('btnLocate').onclick = () => {
+    if (!navigator.geolocation) { alert('Trình duyệt không hỗ trợ định vị.'); return; }
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude, longitude } = pos.coords;
+      if (state.setMode === 'pickup') setPickup(latitude, longitude, true);
+      else setDropoff(latitude, longitude, true);
+    }, () => alert('Không lấy được vị trí.'));
+  };
+
+  document.getElementById('btnSwap').onclick = () => {
+    const p = state.pickup, d = state.dropoff; if (!(p && d)) return;
+    setPickup(d.lat, d.lng); setDropoff(p.lat, p.lng);
+    tryRoute();
+  };
+
+  document.getElementById('vehicle').onchange = (e) => { state.pricing.vehicle = e.target.value; recalcPrice(); };
+  document.getElementById('weather').onchange = (e) => { state.pricing.weather = e.target.value; maybeSuggestVoucher(); recalcPrice(); };
+  const traffic    = document.getElementById('traffic');
+  const trafficVal = document.getElementById('trafficVal');
+  traffic.oninput  = (e) => { state.pricing.traffic = +e.target.value; trafficVal.textContent = e.target.value; recalcPrice(); };
+
+  document.querySelectorAll('#payGroup .tagpay').forEach(el => {
+    el.addEventListener('click', () => {
+      document.querySelectorAll('#payGroup .tagpay').forEach(x => x.classList.remove('selected'));
+      el.classList.add('selected');
+      state.pricing.payment = el.dataset.pay;
+      maybeSuggestVoucher();
+      recalcPrice();
+    });
+  });
+
+  document.getElementById('btnApplyVoucher').onclick = () => {
+    if (state.pricing.voucherLocked) { alert('Voucher đã áp dụng cho chuyến này.'); return; }
+    const v = document.getElementById('voucher').value;
+    if (!v) { alert('Chọn voucher trước.'); return; }
+    state.pricing.voucher       = v;
+    state.pricing.voucherLocked = true;
+    document.getElementById('voucher').disabled         = true;
+    document.getElementById('btnApplyVoucher').disabled = true;
+    if (typeof showVoucherApplied === 'function') showVoucherApplied(v);
+    recalcPrice();
+  };
+
+  const btnBook = document.getElementById('btnBook'); btnBook.disabled = false;
+  btnBook.addEventListener('click', bookDriver);
+  document.getElementById('btnCancel').onclick = cancelTrip;
+  document.getElementById('btnFinish').onclick = () => openModal('ratingModal');
+
+  const stars = document.querySelectorAll('#stars .star');
+  stars.forEach(s => {
+    s.addEventListener('click', () => {
+      const val = +s.dataset.val;
+      stars.forEach(x => x.classList.toggle('active', +x.dataset.val <= val));
+    });
+  });
+  document.getElementById('btnCloseRating').onclick  = () => closeModal('ratingModal');
+  document.getElementById('btnSubmitRating').onclick = () => {
+    const starsEls = document.querySelectorAll('#stars .star.active');
+    const val      = starsEls.length ? starsEls.length : 5;
+    const note     = document.getElementById('ratingNote').value.trim();
+    saveRating(val, note || '');
+    closeModal('ratingModal');
+    alert('Cảm ơn bạn đã đánh giá!');
+    resetDriver();
+    document.getElementById('btnBook').disabled = false;
+  };
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { closeModal('loginModal'); closeModal('ratingModal'); }
+  });
+}
+
+// ====== Bootstrap ======
+(function () {
+  try { initMap(); } catch(e) { console.error(e); showMapLoadError(e); }
+  wire();
+  loadUser();
+  recalcPrice();
+  maybeSuggestVoucher();
+  window.addEventListener('resize', () => state.map && state.map.invalidateSize());
+})();
+  </script>
+</body>
+</html>
